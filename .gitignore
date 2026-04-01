@@ -1,0 +1,28 @@
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio folders
+.vs/
+.vscode/
+
+# Build results
+bin/
+obj/
+[Rr]elease/
+[Dd]ebug/
+
+# NuGet
+*.nupkg
+packages/
+
+# Logs
+*.log
+TestResults/
+
+# Environment / secrets
+.env
+appsettings.Secret.json
