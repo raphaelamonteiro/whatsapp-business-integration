@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsAppIntegration", "WhatsAppIntegration\WhatsAppIntegration.csproj", "{BE5D73E4-AFE4-EDC9-A6A8-040AD9E9907D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WhatsApp.integration", "WhatsApp.integration\WhatsApp.integration.csproj", "{5CD4DFC9-5405-70AE-370D-469AFF3A5EB5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,15 +10,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BE5D73E4-AFE4-EDC9-A6A8-040AD9E9907D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BE5D73E4-AFE4-EDC9-A6A8-040AD9E9907D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BE5D73E4-AFE4-EDC9-A6A8-040AD9E9907D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BE5D73E4-AFE4-EDC9-A6A8-040AD9E9907D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5CD4DFC9-5405-70AE-370D-469AFF3A5EB5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5CD4DFC9-5405-70AE-370D-469AFF3A5EB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5CD4DFC9-5405-70AE-370D-469AFF3A5EB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5CD4DFC9-5405-70AE-370D-469AFF3A5EB5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {35AA9201-0051-4147-8AC3-58EEF46B5DF5}
+		SolutionGuid = {55E59807-87B4-41B9-8A32-2E646DC26949}
 	EndGlobalSection
 EndGlobal
