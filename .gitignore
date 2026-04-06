@@ -26,3 +26,4 @@ TestResults/
 # Environment / secrets
 .env
 appsettings.Secret.json
+appsettings.json

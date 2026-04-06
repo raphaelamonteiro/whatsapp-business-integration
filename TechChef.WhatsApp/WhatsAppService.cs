@@ -18,18 +18,8 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    public async Task<string> SendTemplateAsync(
-        string to,
-        string templateName,
-        string languageCode,
-        List<string> variables)
+    public async Task SendTemplateAsync(string to)
     {
-        var parameters = variables.Select(v => new
-        {
-            type = "text",
-            text = v
-        }).ToArray();
-
         var payload = new
         {
             messaging_product = "whatsapp",
@@ -37,12 +27,8 @@ public class WhatsAppService
             type = "template",
             template = new
             {
-                name = templateName,
-                language = new { code = languageCode },
-                components = new[]
-                {
-                    new { type = "body", parameters }
-                }
+                name = "hello_world",
+                language = new { code = "en_US" }
             }
         };
 
@@ -53,8 +39,8 @@ public class WhatsAppService
 
         if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine($"Erro da Meta: {content}");
-            response.EnsureSuccessStatusCode();
+            Console.WriteLine($"Erro: {content}");
+            return;
         }
 
         using var doc = JsonDocument.Parse(content);
@@ -63,7 +49,6 @@ public class WhatsAppService
             .GetProperty("id")
             .GetString();
 
-        Console.WriteLine($"Mensagem enviada! ID: {messageId}");
-        return messageId!;
+        Console.WriteLine($"✅ Mensagem enviada! ID: {messageId}");
     }
 }

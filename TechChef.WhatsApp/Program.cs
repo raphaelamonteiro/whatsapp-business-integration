@@ -11,9 +11,6 @@ var service = new WhatsAppService(
     config["WhatsApp:ApiUrl"]!
 );
 
-await service.SendTemplateAsync(
-    to: "+55119XXXXXXXX",        // coloca o seu número aqui
-    templateName: "hello_world", // template que já vem aprovado em toda conta de teste
-    languageCode: "en_US",
-    variables: []
-);
+// Coloca aqui o SEU número que você cadastrou como destinatário de teste
+// Formato internacional, sem espaços: +5511999999999
+await service.SendTemplateAsync(to: "+55119XXXXXXXX");
