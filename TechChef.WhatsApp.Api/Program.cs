@@ -1,41 +1,69 @@
+using Microsoft.Extensions.Configuration;
+using System.Text.Json;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// rota que envia a mensagem
+app.MapGet("/send", async () =>
 {
-    app.MapOpenApi();
-}
+    var config = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .Build();
 
-app.UseHttpsRedirection();
+    var service = new WhatsAppService(
+        new HttpClient(),
+        config["WhatsApp:PhoneNumberId"]!,
+        config["WhatsApp:AccessToken"]!,
+        config["WhatsApp:ApiUrl"]!
+    );
+    //Alterar número de telefone
+    await service.SendTemplateAsync(to: "+5512XXXXXXXXX");
+    return "Mensagem enviada!";
+});
 
-var summaries = new[]
+app.MapGet("/webhook", (HttpRequest request) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var mode = request.Query["hub.mode"].ToString();
+    var token = request.Query["hub.verify_token"].ToString();
+    var challenge = request.Query["hub.challenge"].ToString();
 
-app.MapGet("/weatherforecast", () =>
+    if (mode == "subscribe" && token == "XXXXXX")
+        return Results.Ok(challenge);
+
+    return Results.StatusCode(403);
+});
+
+// rota que chama quando o status muda
+app.MapPost("/webhook", async (HttpRequest request) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    using var reader = new StreamReader(request.Body);
+    var body = await reader.ReadToEndAsync();
+
+    using var doc = JsonDocument.Parse(body);
+    var root = doc.RootElement;
+
+    try
+    {
+        var statuses = root
+            .GetProperty("entry")[0]
+            .GetProperty("changes")[0]
+            .GetProperty("value")
+            .GetProperty("statuses");
+
+        foreach (var status in statuses.EnumerateArray())
+        {
+            var id = status.GetProperty("id").GetString();
+            var st = status.GetProperty("status").GetString();
+            Console.WriteLine($"📨 Mensagem {id} → {st}");
+        }
+    }
+    catch
+    {
+        Console.WriteLine($"Payload recebido: {body}");
+    }
+
+    return Results.Ok();
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
