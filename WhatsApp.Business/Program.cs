@@ -11,6 +11,6 @@ var service = new WhatsAppService(
     config["WhatsApp:ApiUrl"]!
 );
 
-// Coloca aqui o SEU número que você cadastrou como destinatário de teste
-// Formato internacional, sem espaços: +5511999999999
-await service.SendTemplateAsync(to: "+55119XXXXXXXX");
+var recipient = config["WhatsApp:Recipient"];
+
+await service.SendTemplateAsync(to: recipient!);
