@@ -18,18 +18,56 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
+    // template simples: sem variáveis!
     public async Task SendTemplateAsync(string to)
     {
+        await SendTemplateWithVariablesAsync(to, "hello_world", "en_US", []);
+    }
+
+
+    // template com variáveis! para promocionais e afins
+    public async Task SendTemplateWithVariablesAsync(
+        string to,
+        string templateName,
+        string languageCode,
+        List<string> variables)
+    {
+        object template;
+
+        // se não tem variáveis, manda sem o campo components
+        if (variables.Count == 0)
+        {
+            template = new
+            {
+                name = templateName,
+                language = new { code = languageCode }
+            };
+        }
+        else
+        {
+            var parameters = variables.Select(v => new
+            {
+                type = "text",
+                text = v
+            }).ToArray();
+
+            template = new
+            {
+                name = templateName,
+                language = new { code = languageCode },
+                components = new[]
+                {
+                    new { type = "body", parameters }
+                }
+            };
+        }
+
         var payload = new
         {
             messaging_product = "whatsapp",
             to,
             type = "template",
-            template = new
-            {
-                name = "hello_world",
-                language = new { code = "en_US" }
-            }
+            template
         };
 
         var response = await _http.PostAsJsonAsync(
@@ -39,7 +77,7 @@ public class WhatsAppService
 
         if (!response.IsSuccessStatusCode)
         {
-            Console.WriteLine($"Erro: {content}");
+            Console.WriteLine($"❌ Erro: {content}");
             return;
         }
 
