@@ -1,4 +1,4 @@
-# WhatsApp.Business — POC com WhatsApp Cloud API
+# 🧪 POC com WhatsApp Cloud API
 
 Proof of concept para testes de envio de mensagens, notificações e automações utilizando a **WhatsApp Cloud API (Meta)**.
 
