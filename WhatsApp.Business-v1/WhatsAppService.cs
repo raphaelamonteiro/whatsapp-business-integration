@@ -18,14 +18,14 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    // template simples: sem variáveis!
+    // template simples: sem variáveis
     public async Task SendTemplateAsync(string to)
     {
         await SendTemplateWithVariablesAsync(to, "hello_world", "en_US", []);
     }
 
 
-    // template com variáveis! para promocionais e afins
+    // template com variáveis para promocionais e afins
     public async Task SendTemplateWithVariablesAsync(
         string to,
         string templateName,
