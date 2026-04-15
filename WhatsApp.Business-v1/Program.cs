@@ -13,13 +13,16 @@ var service = new WhatsAppService(
 
 var recipient = config["WhatsApp:Recipient"]!;
 
+// funcionando: hello_world sem variáveis
+await service.SendTemplateAsync(recipient);
 
-await service.SendTemplateWithVariablesAsync(
-   to: recipient,
-   templateName: "pizza_friday_reminder",
-   languageCode: "pt_BR",
-    variables: ["Raphaela"]   // substitui o {{1}} no template
-);
+// quando o template for aprovado, é só descomentar:
+// await service.SendTemplateWithVariablesAsync(
+//     to: recipient,
+//     templateName: "friday_pizza_promo",
+//     languageCode: "pt_BR",
+//     variables: ["João"]   // substitui o {{1}} no template
+// );
 
 // para mandar para vários clientes de uma vez:
 // var clientes = new List<(string telefone, string nome)>
@@ -39,5 +42,5 @@ await service.SendTemplateWithVariablesAsync(
 //     );
 //
 //     // pequena pausa para não estourar o limite
-await Task.Delay(500);
+//     await Task.Delay(500);
 // }

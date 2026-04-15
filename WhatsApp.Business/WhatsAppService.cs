@@ -18,61 +18,59 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    // template simples: sem variáveis!
-    public async Task SendTemplateAsync(string to)
-    {
-        await SendTemplateWithVariablesAsync(to, "hello_world", "en_US", []);
-    }
-
-
-    // template com variáveis! para promocionais e afins
     public async Task SendTemplateWithVariablesAsync(
         string to,
         string templateName,
         string languageCode,
         List<string> variables)
     {
-        object template;
+        var components = new List<object>();
 
-        // se não tem variáveis, manda sem o campo components
-        if (variables.Count == 0)
+        // 1. HEADER (Onde está o {{nome}})
+        // Importante: Usamos 'parameter_name' para templates com variáveis nomeadas
+        components.Add(new
         {
-            template = new
+            type = "header",
+            parameters = new[]
             {
-                name = templateName,
-                language = new { code = languageCode }
-            };
-        }
-        else
-        {
-            var parameters = variables.Select(v => new
-            {
+            new {
                 type = "text",
-                text = v
-            }).ToArray();
-
-            template = new
-            {
-                name = templateName,
-                language = new { code = languageCode },
-                components = new[]
-                {
-                    new { type = "body", parameters }
-                }
-            };
+                parameter_name = "nome", // Nome exato que está no painel da Meta
+                text = variables[0]
+            }
         }
+        });
+
+        // 2. BUTTON (O link do iFood que a Meta exigiu parâmetro)
+        // Se o botão não tiver nome de variável, ele usa o padrão
+        components.Add(new
+        {
+            type = "button",
+            sub_type = "url",
+            index = "0",
+            parameters = new[]
+            {
+            new {
+                type = "text",
+                text = "promocao_sexta" // O que completa a URL do iFood
+            }
+        }
+        });
 
         var payload = new
         {
             messaging_product = "whatsapp",
-            to,
+            to = to,
             type = "template",
-            template
+            template = new
+            {
+                name = templateName,
+                language = new { code = languageCode },
+                components = components
+            }
         };
 
-        var response = await _http.PostAsJsonAsync(
-            $"{_apiUrl}/{_phoneNumberId}/messages", payload);
-
+        var response = await _http.PostAsJsonAsync($"{_apiUrl}/{_phoneNumberId}/messages", payload);
         var content = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)
@@ -80,13 +78,7 @@ public class WhatsAppService
             Console.WriteLine($"❌ Erro: {content}");
             return;
         }
-
-        using var doc = JsonDocument.Parse(content);
-        var messageId = doc.RootElement
-            .GetProperty("messages")[0]
-            .GetProperty("id")
-            .GetString();
-
-        Console.WriteLine($"✅ Mensagem enviada! ID: {messageId}");
+        Console.WriteLine("✅ MENSAGEM ENVIADA COM SUCESSO!");
     }
+
 }
