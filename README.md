@@ -48,8 +48,7 @@ cd whatsapp-business-integration/WhatsApp.Business
 ```
 
 ### 2. Configure o `appsettings.json`
-
-Crie o arquivo na raiz do projeto:
+Crie o arquivo:
 
 ```json
 {
@@ -75,7 +74,7 @@ dotnet run
 Saída esperada:
 
 ```
-✅ Mensagem enviada! ID: wamid.XXXXXXXXXXXX
+✅ MENSAGEM ENVIADA COM SUCESSO!
 ```
 
 ---
@@ -99,26 +98,8 @@ await service.SendTemplateWithVariablesAsync(
     to: "+5511999999999",
     templateName: "friday_pizza_promo",
     languageCode: "pt_BR",
-    variables: ["João"]
+    variables: ["Rapha"]
 );
-```
-
----
-
-## 📣 Exemplo — envio em lote
-
-```csharp
-foreach (var cliente in clientes)
-{
-    await service.SendTemplateWithVariablesAsync(
-        to: cliente.telefone,
-        templateName: "friday_pizza_promo",
-        languageCode: "pt_BR",
-        variables: [cliente.nome]
-    );
-
-    await Task.Delay(500);
-}
 ```
 
 ---
@@ -138,7 +119,7 @@ foreach (var cliente in clientes)
 * [ ] Webhook para status de mensagens
 * [ ] Persistência em banco
 * [ ] Simulação de campanhas
-* [ ] Rate limiting mais robusto
+* [ ] Integração
 * [ ] Agendamento de envios
 
 ---
