@@ -1,6 +1,4 @@
-# ☕ My daily diary of development
-
-## Daily Log - 2026-04-15
+# ☕ Daily Log - 2026-04-15
 
 ### What I did today
 - Worked on API integration
