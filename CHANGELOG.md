@@ -2,6 +2,20 @@
 
 Todas as mudanças importantes deste projeto serão documentadas neste arquivo.
 
+## [2.0.0] - 08/04/2026
+
+### Adicionado
+- WebHook com Cloudflare Tunnel
+- Resposta a mensagem do usuário (responde "oi" com "tudo bem?")
+
+### Alterado
+- Sem uso de template
+
+### Mudanças que quebram compatibilidade
+- Adição de Endpoints e de token do tunnel
+
+
+
 ## [1.2.0] - 15/04/2026
 
 ### Adicionado

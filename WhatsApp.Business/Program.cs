@@ -21,13 +21,11 @@ builder.Services.AddSingleton<WhatsAppService>(sp =>
 var app = builder.Build();
 
 // endpoints
-
 // GET - Meta valida o túnel (Aperto de mão)
 app.MapGet("/webhook", (HttpContext context) =>
 {
     var query = context.Request.Query;
 
-    // Agora pegamos o valor que está no JSON de forma segura
     string verifyToken = config["WhatsApp:VerifyToken"] ?? "";
 
     if (query["hub.mode"] == "subscribe" && query["hub.verify_token"] == verifyToken)
@@ -40,8 +38,7 @@ app.MapGet("/webhook", (HttpContext context) =>
     return Results.BadRequest("Token inválido");
 });
 
-
-// POST: Para receber o "Oi" e responder "Tudo bem?"
+// POST - Para receber o "oi" e responder "tudo bem?"
 app.MapPost("/webhook", async (HttpContext context, WhatsAppService service) =>
 {
     using var reader = new StreamReader(context.Request.Body);
@@ -52,8 +49,7 @@ app.MapPost("/webhook", async (HttpContext context, WhatsAppService service) =>
     var changes = entry.GetProperty("changes")[0];
     var value = changes.GetProperty("value");
 
-    // 🛑 A CHAVE DO SUCESSO: Só processa se existir a propriedade "messages"
-    // Se vier "statuses", a gente ignora para não entrar em loop!
+    // só processa se existir a propriedade "messages"
     if (value.TryGetProperty("messages", out var messages))
     {
         var textElement = messages[0].GetProperty("text");
