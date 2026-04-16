@@ -56,7 +56,8 @@ Crie o arquivo:
     "PhoneNumberId": "SEU_PHONE_NUMBER_ID",
     "AccessToken": "SEU_ACCESS_TOKEN",
     "ApiUrl": "https://graph.facebook.com/v17.0",
-    "Recipient": "+5511999999999"
+    "Recipient": "5511999999999",
+    "VerifyToken": "TOKEN_WEBHOOK"
   }
 }
 ```
