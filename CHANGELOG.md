@@ -14,6 +14,8 @@ Todas as mudanças importantes deste projeto serão documentadas neste arquivo.
 ### Mudanças que quebram compatibilidade
 - Adição de Endpoints e de token do tunnel
 
+### Removido
+- Remoção de comentários desnecessários no código.
 
 
 ## [1.2.0] - 15/04/2026
