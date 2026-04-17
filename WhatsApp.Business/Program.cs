@@ -1,15 +1,35 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.Ollama;
 using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
+using ai.Plugins; // Seus plugins de cardápio
+using ai.Services; // Seus serviços de entrega
+using ai.State;  // Seu controle de estado
+using ai.ToolCall;
+using ai.Plugins;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// configuração e Injeção do Serviço
+// 1. CONFIGURAÇÕES DE INFRA
 var config = builder.Configuration.AddJsonFile("appsettings.json").Build();
 
-// registra o WhatsAppService pra ser usado nos endpoints
-builder.Services.AddHttpClient();
+// 2. CONFIGURAÇÃO DA IA (OLLAMA + SK)
+var kernelBuilder = Kernel.CreateBuilder();
+kernelBuilder.AddOllamaChatCompletion(
+    modelId: "qwen2.5:3b",
+    endpoint: new Uri("http://localhost:11434")
+);
+
+// Registrar seus plugins e estados
+kernelBuilder.Services.AddSingleton<DeliveryApiService>();
+kernelBuilder.Services.AddSingleton<PedidoState>();
+kernelBuilder.Services.AddHttpClient();
+
+// Criar o Kernel
+var kernel = kernelBuilder.Build();
+kernel.ImportPluginFromType<DeliveryPlugin>();
+
+// 3. CONFIGURAÇÃO DO WHATSAPP
 builder.Services.AddSingleton<WhatsAppService>(sp =>
     new WhatsAppService(
         sp.GetRequiredService<HttpClient>(),
@@ -18,55 +38,40 @@ builder.Services.AddSingleton<WhatsAppService>(sp =>
         config["WhatsApp:ApiUrl"]!
     ));
 
+// Histórico de Chat (Para a IA lembrar o que o Renato disse na msg anterior)
+var history = new ChatHistory();
+history.AddSystemMessage("Você é o TechBot... (seu prompt completo)");
+
 var app = builder.Build();
 
-// endpoints
-// GET - Meta valida o túnel (Aperto de mão)
-app.MapGet("/webhook", (HttpContext context) =>
-{
-    var query = context.Request.Query;
-
-    string verifyToken = config["WhatsApp:VerifyToken"] ?? "";
-
-    if (query["hub.mode"] == "subscribe" && query["hub.verify_token"] == verifyToken)
-    {
-        var challenge = query["hub.challenge"].ToString();
-        Console.WriteLine($"✅ Validando Webhook. Challenge: {challenge}");
-        return Results.Text(challenge);
-    }
-
-    return Results.BadRequest("Token inválido");
-});
-
-// POST - Para receber o "oi" e responder "tudo bem?"
-app.MapPost("/webhook", async (HttpContext context, WhatsAppService service) =>
+// 4. O WEBHOOK INTELIGENTE
+app.MapPost("/webhook", async (HttpContext context, WhatsAppService whatsapp) =>
 {
     using var reader = new StreamReader(context.Request.Body);
     var body = await reader.ReadToEndAsync();
-
     using var json = JsonDocument.Parse(body);
-    var entry = json.RootElement.GetProperty("entry")[0];
-    var changes = entry.GetProperty("changes")[0];
-    var value = changes.GetProperty("value");
 
-    // só processa se existir a propriedade "messages"
+    var value = json.RootElement.GetProperty("entry")[0].GetProperty("changes")[0].GetProperty("value");
+
     if (value.TryGetProperty("messages", out var messages))
     {
-        var textElement = messages[0].GetProperty("text");
-        var textBody = textElement.GetProperty("body").GetString();
+        var userMessage = messages[0].GetProperty("text").GetProperty("body").GetString();
         var from = messages[0].GetProperty("from").GetString();
 
-        Console.WriteLine($"📩 Mensagem real de {from}: {textBody}");
+        // Manda o input do Zap para a IA
+        history.AddUserMessage(userMessage!);
 
-        // Só responde se o cara escreveu algo (e não se for eco)
-        if (!string.IsNullOrEmpty(from))
-        {
-            await service.SendTextMessageAsync(from, "Oi, tudo bem?");
-        }
+        var chatService = kernel.GetRequiredService<IChatCompletionService>();
+        var settings = new OllamaPromptExecutionSettings { FunctionChoiceBehavior = FunctionChoiceBehavior.Auto() };
+
+        // IA processa e decide se chama função (cardápio, pedido, etc)
+        var result = await chatService.GetChatMessageContentAsync(history, settings, kernel);
+
+        // Responde o Renato no WhatsApp
+        await whatsapp.SendTextMessageAsync(from!, result.Content!);
+        history.AddAssistantMessage(result.Content!);
     }
-
     return Results.Ok();
 });
 
-Console.WriteLine(" TechChef Online! Ouvindo na porta 5000...");
-app.Run("http://0.0.0.0:5000"); // força a porta que o Cloudflare está usando
+app.Run("http://0.0.0.0:5000");
