@@ -1,7 +1,7 @@
 using Microsoft.SemanticKernel;
 using chat_with_api.State;
 using chat_with_api.Services;
-using System.ComponentModel; // ← para Description
+using System.ComponentModel;
 using System.Text;
 
 namespace chat_with_api.Plugins;

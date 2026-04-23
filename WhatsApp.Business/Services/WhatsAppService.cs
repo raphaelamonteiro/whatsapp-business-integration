@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Net.Http;
+
 
 public class WhatsAppService
 {
@@ -18,6 +20,19 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
+    public async Task SendTypingAsync(string to)
+    {
+        var body = new
+        {
+            messaging_product = "whatsapp",
+            recipient_type = "individual",
+            to = to,
+            sender_action = "typing"
+        };
+
+        // Mudei de _httpClient para _http (para bater com o seu private readonly HttpClient _http)
+        await _http.PostAsJsonAsync($"{_apiUrl}/{_phoneNumberId}/messages", body);
+    }
     public async Task SendTextMessageAsync(string to, string message)
     {
         var payload = new
