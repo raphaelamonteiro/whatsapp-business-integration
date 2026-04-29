@@ -62,8 +62,6 @@ Crie o arquivo:
 }
 ```
 
-> ⚠️ O arquivo não está versionado por conter credenciais.
-
 ---
 
 ## ▶️ Como executar
