@@ -4,199 +4,75 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.Ollama;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using chat_with_api.Services;
-using chat_with_api.State;
 using chat_with_api.Plugins;
+using chat_with_api.State;
+using System.Net.Http;
+using System.Text.RegularExpressions; // Adicionado para o Regex funcionar
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Carrega as configurações (onde estão seus tokens)
+// 1. CARREGA AS CONFIGURAÇÕES
 var config = builder.Configuration.AddJsonFile("appsettings.json").Build();
 
-// 2. CONFIGURAÇÃO DO SEMANTIC KERNEL
-var kernelBuilder = Kernel.CreateBuilder();
-
-// Registro do Ollama
-kernelBuilder.AddOllamaChatCompletion(
-    modelId: "qwen2.5:3b",
-    endpoint: new Uri("http://localhost:11434")
-);
-
-// --- INJEÇÃO DOS SEUS SERVIÇOS NO KERNEL ---
-// Aqui passamos o token do JSON diretamente para o construtor do DeliveryApiService
-kernelBuilder.Services.AddSingleton<DeliveryApiService>(sp =>
-{
-    var apiToken = config["WhatsApp:API_TOKEN"] ?? "";
-    return new DeliveryApiService(apiToken);
-});
-
-kernelBuilder.Services.AddSingleton<PedidoState>();
-
-// Constrói o Kernel e Importa os Plugins
-var myKernel = kernelBuilder.Build();
-myKernel.ImportPluginFromType<DeliveryPlugin>();
-
-// Registra o Kernel no builder principal para o Webhook usar
-builder.Services.AddSingleton(myKernel);
-
-// 3. REGISTRO DO WHATSAPP SERVICE
+// 2. REGISTRO DE INFRAESTRUTURA
 builder.Services.AddHttpClient();
+builder.Services.AddSingleton<PedidoState>();
+
+// 3. SERVIÇOS DE NEGÓCIO
+builder.Services.AddSingleton<DeliveryApiService>(sp =>
+    new DeliveryApiService(config["WhatsApp:API_TOKEN"] ?? ""));
+
 builder.Services.AddSingleton<WhatsAppService>(sp =>
     new WhatsAppService(
-        sp.GetRequiredService<HttpClient>(),
+        sp.GetRequiredService<IHttpClientFactory>().CreateClient(),
         config["WhatsApp:PhoneNumberId"]!,
         config["WhatsApp:AccessToken"]!,
-        config["WhatsApp:ApiUrl"]!
+        config["WhatsApp:ApiUrl"] ?? "https://graph.facebook.com/v17.0"
     ));
 
-// 4. HISTÓRICO DE MENSAGENS (O "Cérebro" do TechBot)
+// 4. CONFIGURAÇÃO DO SEMANTIC KERNEL
+builder.Services.AddScoped<Kernel>(sp =>
+{
+    var kernelBuilder = Kernel.CreateBuilder();
+
+    // Lendo as configurações do JSON
+    string modelId = config["Ollama:ModelId"] ?? "qwen3.5:cloud";
+    string apiKey = config["Ollama:ApiKey"] ?? "";
+    string endpoint = config["Ollama:Endpoint"] ?? "";
+
+    kernelBuilder.AddOpenAIChatCompletion(
+        modelId: modelId,
+        apiKey: apiKey,
+        endpoint: new Uri(endpoint)
+    );
+
+    var kernel = kernelBuilder.Build();
+
+    var apiService = sp.GetRequiredService<DeliveryApiService>();
+    var pedidoState = sp.GetRequiredService<PedidoState>();
+    kernel.ImportPluginFromObject(new DeliveryPlugin(apiService, pedidoState), "DeliveryPlugin");
+
+    return kernel;
+});
+
+// 5. HISTÓRICO
 builder.Services.AddSingleton<ChatHistory>(sp =>
 {
     var history = new ChatHistory();
-    history.AddSystemMessage("""
-            Você é o TechBot, atendente de delivery.
-
-            ## OBJETIVO
-            Conduzir o pedido passo a passo usando funções.
-
-            ## REGRA PRINCIPAL
-            - Nunca invente produtos, preços ou respostas de cardápio
-            - Sempre use funções para qualquer dado
-            - Se existir função → NÃO responda texto
-
-            ## TRAVA GLOBAL (PRIORIDADE MÁXIMA)
-
-            Se telefone = nao:
-            → única resposta possível: pedir telefone
-            → única função possível: InformarTelefone
-            → ignore qualquer outra mensagem
-
-            ## ESTADO INTERNO
-            telefone: nao
-            itens: nao
-            endereco: nao
-            pagamento: nao
-
-            ## FLUXO OBRIGATÓRIO
-
-            1. telefone → InformarTelefone  
-            2. itens → ListarProdutos ou BuscarProdutos → AdicionarItemPedido  
-            3. endereco → InformarEndereco  
-            4. pagamento → InformarPagamento  
-            5. final → VerPedido → FinalizarPedido  
-
-            ## REGRAS DE AÇÃO
-
-            ### TELEFONE
-            Se não tiver telefone:
-            → pedir telefone
-            → não diga mais nada
-
-            ---
-
-            ### CARDÁPIO (CRÍTICO)
-
-            Se usuário disser:
-            - "cardápio"
-            - "ver cardápio"
-            - "ver opções"
-
-            → ação obrigatória:
-            → chamar ListarProdutos
-
-            PROIBIDO:
-            - responder texto
-            - dizer que não tem produtos
-            - inventar itens
-
-            ---
-
-            ### PRODUTO
-
-            Se usuário disser:
-            - "quero X"
-            - "me vê X"
-
-            → chamar BuscarProdutos
-
-            Após retorno:
-            → chamar AdicionarItemPedido
-
-            ---
-
-            ### ENDEREÇO
-
-            Se itens = sim e endereco = nao:
-            → pedir endereço
-            → InformarEndereco
-
-            ---
-
-            ### PAGAMENTO
-
-            Se endereco = sim e pagamento = nao:
-            → pedir pagamento
-            → InformarPagamento
-
-            ---
-
-            ### FINALIZAÇÃO
-
-            Se tudo preenchido:
-            → VerPedido
-            → depois FinalizarPedido
-
-            ---
-
-            ## PROIBIÇÕES
-
-            - Nunca pular etapa
-            - Nunca chamar 2 funções juntas
-            - Nunca responder produto sem função
-            - Nunca inventar resposta
-            - Nunca dizer "não sei" ou "não tem"
-
-            ---
-
-            ## MENSAGENS SIMPLES
-
-            Se usuário disser:
-            - "ok", "sim", "obrigado"
-
-            → responder normal (sem função)
-
-            ---
-
-            ## RESPOSTAS
-
-            - Máx. 2 frases
-            - Direto ao ponto
-            - Sem explicações longas
-
-            ---
-
-            ## COMPORTAMENTO EM DÚVIDA
-
-            Se não entender:
-            → faça pergunta curta
-
-            Ex:
-            "Qual item você quer?"
-        """);
+    history.AddSystemMessage("Você é o TechBot, atendente de delivery da pizzaria.");
     return history;
 });
 
 var app = builder.Build();
 
-// --- ENDPOINTS ---
+// --- ENDPOINTS (Webhook Meta) ---
 
-// GET: Handshake com a Meta (Validação do Webhook)
 app.MapGet("/webhook", (HttpContext context) =>
 {
     var query = context.Request.Query;
     string verifyToken = config["WhatsApp:VerifyToken"] ?? "";
-
     if (query["hub.mode"] == "subscribe" && query["hub.verify_token"] == verifyToken)
     {
         return Results.Text(query["hub.challenge"].ToString());
@@ -204,66 +80,69 @@ app.MapGet("/webhook", (HttpContext context) =>
     return Results.BadRequest();
 });
 
-// POST
-// POST: Recebe mensagens do WhatsApp
 app.MapPost("/webhook", async (HttpContext context, WhatsAppService whatsapp, ChatHistory history, Kernel k) =>
 {
     using var reader = new StreamReader(context.Request.Body);
     var body = await reader.ReadToEndAsync();
 
     using var json = JsonDocument.Parse(body);
-    var value = json.RootElement.GetProperty("entry")[0].GetProperty("changes")[0].GetProperty("value");
 
-    if (value.TryGetProperty("messages", out var messages))
+    try
     {
-        var userMessage = messages[0].GetProperty("text").GetProperty("body").GetString() ?? "";
-        var from = messages[0].GetProperty("from").GetString() ?? "";
+        var entry = json.RootElement.GetProperty("entry")[0];
+        var changes = entry.GetProperty("changes")[0];
+        var value = changes.GetProperty("value");
 
-        // Respondemos OK para a Meta não repetir a mensagem
-        _ = Task.Run(async () =>
+        if (value.TryGetProperty("messages", out var messages))
         {
-            try
+            var msg = messages[0];
+            if (msg.TryGetProperty("text", out var textObj))
             {
-                // 1. Sinal de digitando
-                await whatsapp.SendTypingAsync(from);
+                var userMessage = textObj.GetProperty("body").GetString() ?? "";
+                var from = msg.GetProperty("from").GetString() ?? "";
 
-                history.AddUserMessage(userMessage);
-
-                var chatService = k.GetRequiredService<IChatCompletionService>();
-                var settings = new OllamaPromptExecutionSettings
+                _ = Task.Run(async () =>
                 {
-                    FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
-                    Temperature = 0 // Mantém a IA focada nos dados reais
-                };
+                    try
+                    {
+                        await whatsapp.SendTypingAsync(from);
+                        history.AddUserMessage(userMessage);
 
-                // Chamada 1: Executa o Plugin/Função
-                var result = await chatService.GetChatMessageContentAsync(history, settings, k);
+                        var chatService = k.GetRequiredService<IChatCompletionService>();
+                        var settings = new OpenAIPromptExecutionSettings
+                        {
+                            FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+                        };
 
-                // Chamada 2: Se vier vazio ou com tag de ferramenta, força a geração do texto
-                if (string.IsNullOrEmpty(result.Content) || result.Content.Contains("tool_name"))
-                {
-                    result = await chatService.GetChatMessageContentAsync(history, settings, k);
-                }
+                        var result = await chatService.GetChatMessageContentAsync(history, settings, k);
 
-                // --- VALIDAÇÃO DE SEGURANÇA (O conserto do erro text.body) ---
-                string respostaFinal = result.Content ?? "";
+                        // TRATAMENTO DA RESPOSTA (Limpando o Thinking)
+                        string respostaBruta = result.Content ?? "";
 
-                // Se a IA ainda assim não gerou texto, mas o plugin rodou, nós damos o texto final
-                if (string.IsNullOrWhiteSpace(respostaFinal) || respostaFinal.Length < 3)
-                {
-                    // Pequeno truque: verificamos se no histórico a última mensagem (do plugin) tem dados
-                    respostaFinal = "Perfeito! Já consultei nosso sistema. No que posso te ajudar com as opções que encontrei?";
-                }
+                        // Remove as tags <think>...</think> para o cliente não ver a IA "pensando"
+                        string respostaParaEnviar = Regex.Replace(respostaBruta, @"<think>.*?</think>", "", RegexOptions.Singleline).Trim();
 
-                // Envia para o WhatsApp (Garantido que não é vazio!)
-                await whatsapp.SendTextMessageAsync(from, respostaFinal);
-                history.AddAssistantMessage(respostaFinal);
+                        // Se a IA chamou função e não deu resposta de texto, tentamos pegar o resultado final
+                        if (string.IsNullOrEmpty(respostaParaEnviar))
+                        {
+                            result = await chatService.GetChatMessageContentAsync(history, settings, k);
+                            respostaParaEnviar = result.Content ?? "Como posso ajudar?";
+                        }
+
+                        await whatsapp.SendTextMessageAsync(from, respostaParaEnviar);
+                        history.AddAssistantMessage(respostaParaEnviar);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"❌ Erro na IA: {ex.Message}");
+                    }
+                });
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Erro no processamento da IA: {ex.Message}");
-            }
-        });
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"⚠️ Webhook: {ex.Message}");
     }
 
     return Results.Ok();

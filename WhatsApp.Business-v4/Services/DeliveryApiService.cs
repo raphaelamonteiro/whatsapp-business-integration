@@ -1,8 +1,8 @@
+namespace chat_with_api.Services;
+
 using RestSharp;
 using System.Text.Json;
 using chat_with_api.DTO;
-
-namespace chat_with_api.Services;
 
 public class DeliveryApiService
 {
@@ -54,8 +54,9 @@ public class DeliveryApiService
         }
         catch
         {
+            // Se a sua API retorna um objeto que CONTÉM a lista (ex: { "data": [] })
             using var doc = JsonDocument.Parse(response.Content);
-            if (doc.RootElement.TryGetProperty("data", out var dataArray))
+            if (doc.RootElement.TryGetProperty("data", out var dataArray)) // Ajuste "data" para o nome real se for diferente
             {
                 return JsonSerializer.Deserialize<List<ProdutoDto>>(dataArray.GetRawText(),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
