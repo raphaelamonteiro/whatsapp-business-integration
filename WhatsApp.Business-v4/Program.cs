@@ -23,8 +23,7 @@ kernelBuilder.AddOllamaChatCompletion(
     endpoint: new Uri("http://localhost:11434")
 );
 
-// --- INJEÇÃO DOS SEUS SERVIÇOS NO KERNEL ---
-// Aqui passamos o token do JSON diretamente para o construtor do DeliveryApiService
+// --- injeção dos serviços no Kernel  ---
 kernelBuilder.Services.AddSingleton<DeliveryApiService>(sp =>
 {
     var apiToken = config["WhatsApp:API_TOKEN"] ?? "";
@@ -33,11 +32,11 @@ kernelBuilder.Services.AddSingleton<DeliveryApiService>(sp =>
 
 kernelBuilder.Services.AddSingleton<PedidoState>();
 
-// Constrói o Kernel e Importa os Plugins
+// constrói o Kernel e Importa os Plugins
 var myKernel = kernelBuilder.Build();
 myKernel.ImportPluginFromType<DeliveryPlugin>();
 
-// Registra o Kernel no builder principal para o Webhook usar
+// Registra o Kernel no builder principal pro Webhook usar
 builder.Services.AddSingleton(myKernel);
 
 // 3. REGISTRO DO WHATSAPP SERVICE
@@ -55,7 +54,7 @@ builder.Services.AddSingleton<ChatHistory>(sp =>
 {
     var history = new ChatHistory();
     history.AddSystemMessage("""
-            Você é o TechBot, atendente de delivery.
+         Você é o TechBot, atendente de delivery.
 
             ## OBJETIVO
             Conduzir o pedido passo a passo usando funções.
@@ -204,7 +203,6 @@ app.MapGet("/webhook", (HttpContext context) =>
     return Results.BadRequest();
 });
 
-// POST
 // POST: Recebe mensagens do WhatsApp
 app.MapPost("/webhook", async (HttpContext context, WhatsAppService whatsapp, ChatHistory history, Kernel k) =>
 {
