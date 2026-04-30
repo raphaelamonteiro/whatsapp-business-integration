@@ -4,7 +4,7 @@ public class ConsultaDto
 {
     public List<PesquisaDto>? ListPesquisaDto { get; set; }
     public List<string>? ListOrdenacao { get; set; }
-    public int RegistrosPorPagina { get; set; } = 50;
+    public int RegistrosPorPagina { get; set; } = 10;
     public int NumeroPagina { get; set; } = 1;
 }
 

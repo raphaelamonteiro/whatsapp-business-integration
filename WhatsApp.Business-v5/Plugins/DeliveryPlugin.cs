@@ -17,11 +17,26 @@ public class DeliveryPlugin
         _state = state;
     }
 
+    // Método temporário de debug — remover depois
+    public int DebugStateId() => _state.GetHashCode();
+
+    [KernelFunction, Description("Registra o telefone do cliente para iniciar o atendimento.")]
+    public string InformarTelefone(
+        [Description("Número de telefone do cliente")] string telefone)
+    {
+        if (!string.IsNullOrEmpty(_state.Telefone))
+            return $"Telefone já registrado como {_state.Telefone}.";
+
+        _state.Telefone = telefone;
+        _state.EtapaAtual = EtapaPedido.EscolhendoItens;
+        return "Telefone registrado com sucesso.";
+    }
+
     [KernelFunction, Description("Lista todos os produtos disponíveis no cardápio.")]
     public async Task<string> ListarProdutos()
     {
         if (string.IsNullOrEmpty(_state.Telefone))
-            return "ERRO: telefone não registrado. Não mostre cardápio.";
+            return "ERRO: telefone não registrado. Não mostre cardápio."; // ← mais difícil de ignorar
 
         var produtos = await _service.BuscarProdutosAsync();
 
@@ -30,7 +45,7 @@ public class DeliveryPlugin
 
         var sb = new StringBuilder();
         // Só nome e preço — sem descrição longa no contexto
-        foreach (var p in produtos.Take(15))
+        foreach (var p in produtos.Take(8))
             sb.AppendLine($"{p.Descricao}|R${p.Preco:F2}");
 
         return sb.ToString();
@@ -49,8 +64,8 @@ public class DeliveryPlugin
             return $"'{nome}' não encontrado.";
 
         var sb = new StringBuilder();
-        // Máximo 10 resultados
-        foreach (var p in produtos.Take(10))
+        // Máximo 5 resultados, formato compacto
+        foreach (var p in produtos.Take(5))
             sb.AppendLine($"{p.Descricao}|R${p.Preco:F2}");
 
         return sb.ToString();

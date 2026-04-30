@@ -20,19 +20,19 @@ public class WhatsAppService
             new AuthenticationHeaderValue("Bearer", accessToken);
     }
 
-    public async Task SendTypingAsync(string to, string messageId)
+    public async Task SendTypingAsync(string to)
     {
         var body = new
         {
             messaging_product = "whatsapp",
-            status = "read",
-            message_id = messageId,
-            typing_indicator = new { type = "text" }
+            recipient_type = "individual",
+            to = to,
+            sender_action = "typing"
         };
 
+        // Mudei de _httpClient para _http (para bater com o seu private readonly HttpClient _http)
         await _http.PostAsJsonAsync($"{_apiUrl}/{_phoneNumberId}/messages", body);
     }
-
     public async Task SendTextMessageAsync(string to, string message)
     {
         var payload = new

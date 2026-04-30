@@ -1,27 +1,27 @@
+namespace chat_with_api.Services;
+
 using RestSharp;
 using System.Text.Json;
 using chat_with_api.DTO;
 
-namespace chat_with_api.Services;
-
 public class DeliveryApiService
 {
     private readonly RestClient _client;
-    public DeliveryApiService(string token, string baseUrl = "http://localhost:5256")
+    public DeliveryApiService(string token)
     {
-        _client = new RestClient(baseUrl);
+        _client = new RestClient("http://localhost:5256");
 
         if (string.IsNullOrEmpty(token))
             throw new Exception("API_TOKEN não foi fornecido ao serviço.");
 
+        // Configura o cabeçalho de autorização usando o token do JSON
         _client.AddDefaultHeader("Authorization", $"Bearer {token}");
     }
-
     public async Task<List<ProdutoDto>?> BuscarProdutosAsync(string? nome = null, int operador = 1)
     {
         var request = new RestRequest("/Produto/Consultar", Method.Post);
 
-        // monta o corpo como a API pediu
+        // Montamos o corpo EXATAMENTE como a API pediu no exemplo
         var body = new
         {
             listPesquisaDefaultDto = new object[] { },
@@ -48,14 +48,15 @@ public class DeliveryApiService
 
         try
         {
-            // se a API retorna a lista direto: [{},{}]
+            // Se a sua API retorna a lista direto: [{},{}]
             return JsonSerializer.Deserialize<List<ProdutoDto>>(response.Content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch
         {
+            // Se a sua API retorna um objeto que CONTÉM a lista (ex: { "data": [] })
             using var doc = JsonDocument.Parse(response.Content);
-            if (doc.RootElement.TryGetProperty("data", out var dataArray))
+            if (doc.RootElement.TryGetProperty("data", out var dataArray)) // Ajuste "data" para o nome real se for diferente
             {
                 return JsonSerializer.Deserialize<List<ProdutoDto>>(dataArray.GetRawText(),
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
