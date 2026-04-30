@@ -17,6 +17,20 @@ public class DeliveryPlugin
         _state = state;
     }
 
+    public int DebugStateId() => _state.GetHashCode();
+
+    [KernelFunction, Description("Registra o telefone do cliente para iniciar o atendimento.")]
+    public string InformarTelefone(
+        [Description("Número de telefone do cliente")] string telefone)
+    {
+        if (!string.IsNullOrEmpty(_state.Telefone))
+            return $"Telefone já registrado como {_state.Telefone}.";
+
+        _state.Telefone = telefone;
+        _state.EtapaAtual = EtapaPedido.EscolhendoItens;
+        return "Telefone registrado com sucesso.";
+    }
+
     [KernelFunction, Description("Lista todos os produtos disponíveis no cardápio.")]
     public async Task<string> ListarProdutos()
     {
