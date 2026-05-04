@@ -1,6 +1,7 @@
 using RestSharp;
 using System.Text.Json;
 using chat_with_api.DTO;
+using chat_with_api.State;
 
 namespace chat_with_api.Services;
 
@@ -63,4 +64,52 @@ public class DeliveryApiService
             return null;
         }
     }
+    public async Task<bool> CriarVendaAsync(PedidoState pedido)
+    {
+        // DEBUG
+        Console.WriteLine($"🛒 Itens no pedido: {pedido.Itens.Count}");
+        foreach (var item in pedido.Itens)
+            Console.WriteLine($"   → {item.ProdutoUid} | {item.Nome} | {item.Quantidade}x R${item.Preco}");
+
+        var total = pedido.Itens.Sum(i => i.Preco * i.Quantidade);
+
+        var venda = new VendaDto
+        {
+            TotalServico = total,
+            Total = total,
+            TotalAPagar = total,
+            DataHoraAbertura = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+            ListVendaProdutoServico = pedido.Itens.Select(i => new VendaProdutoServicoDto
+            {
+                ProdutoUid = i.ProdutoUid,
+                Quantidade = i.Quantidade,
+                ValorUnitario = i.Preco,
+                ValorTotal = i.Preco * i.Quantidade,
+                Observacao = i.Observacao,
+                ImprimirCozinha = true
+            }).ToList()
+        };
+
+        // DEBUG — vê o JSON exato que vai pra API
+        var jsonDebug = JsonSerializer.Serialize(venda, new JsonSerializerOptions { WriteIndented = true });
+        Console.WriteLine($"📦 JSON enviado:\n{jsonDebug}");
+
+        var request = new RestRequest("/Venda/Salvar", Method.Post);
+        request.AddJsonBody(venda);
+
+        var response = await _client.ExecuteAsync(request);
+
+        Console.WriteLine($"📬 Status: {response.StatusCode}");
+        Console.WriteLine($"📬 Resposta: {response.Content}");
+
+        if (!response.IsSuccessful)
+        {
+            Console.WriteLine($"❌ Erro ao criar venda: {response.StatusCode} - {response.Content}");
+            return false;
+        }
+
+        Console.WriteLine("✅ Venda criada no banco com sucesso!");
+        return true;
+    }
+
 }

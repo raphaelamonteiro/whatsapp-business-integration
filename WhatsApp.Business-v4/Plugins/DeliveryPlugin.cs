@@ -100,9 +100,11 @@ public class DeliveryPlugin
         else
             _state.Itens.Add(new ItemPedido
             {
+                ProdutoUid = produto.Uid,
                 Nome = produto.Descricao,
                 Quantidade = quantidade,
-                Preco = produto.Preco
+                Preco = produto.Preco,
+                Observacao = observacao ?? ""
             });
 
         _state.EtapaAtual = EtapaPedido.AguardandoEndereco;

@@ -27,7 +27,9 @@ public enum EtapaPedido
 
 public class ItemPedido
 {
+    public Guid ProdutoUid { get; set; }
     public string Nome { get; set; } = string.Empty;
     public int Quantidade { get; set; }
     public decimal Preco { get; set; }
+    public string Observacao { get; set; } = "";
 }

@@ -69,12 +69,13 @@ public class DeliveryPlugin
 
         return sb.ToString();
     }
-
     [KernelFunction, Description("Adiciona um item ao pedido. Use o nome exato retornado pelo cardápio.")]
     public async Task<string> AdicionarItemPedido(
-    [Description("Nome EXATO do produto conforme listado no cardápio")] string nome,
-    [Description("Quantidade")] int quantidade)
+        [Description("Nome EXATO do produto conforme listado no cardápio")] string nome,
+        [Description("Quantidade")] int quantidade,
+        [Description("Observação do cliente sobre o item, ex: sem cebola, queijo extra. Se não houver, deixe vazio.")] string? observacao = null)
     {
+
         if (string.IsNullOrEmpty(_state.Telefone))
         {
             _state.EtapaAtual = EtapaPedido.AguardandoTelefone;
@@ -82,15 +83,25 @@ public class DeliveryPlugin
         }
 
         var produtos = await _service.BuscarProdutosAsync(nome);
+        // Filtra localmente pelo nome buscado (ignora produtos de teste)
+        var produtosFiltrados = produtos?
+            .Where(p => ScoreSimilaridade(p.Descricao, nome) > 0)
+            .OrderByDescending(p => ScoreSimilaridade(p.Descricao, nome))
+            .ToList();
 
+        if (produtosFiltrados == null || produtosFiltrados.Count == 0)
+            return $"'{nome}' não encontrado no cardápio.";
+
+        var produto = produtosFiltrados.First();
+        Console.WriteLine($"✅ Produto escolhido: {produto.Uid} | {produto.Descricao}");
+
+
+        // DEBUG — remove depois
+        Console.WriteLine($"✅ Produto escolhido: {produto.Uid} | {produto.Descricao} | R${produto.Preco}");
+        Console.WriteLine($"   Score: {ScoreSimilaridade(produto.Descricao, nome)}");
         if (produtos == null || produtos.Count == 0)
             return $"'{nome}' não encontrado no cardápio.";
 
-        // busca o produto com nome mais próximo do solicitado
-        // Evita pegar o primeiro resultado aleatório quando a API retorna múltiplos
-        var produto = produtos
-            .OrderByDescending(p => ScoreSimilaridade(p.Descricao, nome))
-            .First();
 
         var existente = _state.Itens.FirstOrDefault(i => i.Nome == produto.Descricao);
 
@@ -99,13 +110,17 @@ public class DeliveryPlugin
         else
             _state.Itens.Add(new ItemPedido
             {
+                ProdutoUid = produto.Uid,
                 Nome = produto.Descricao,
                 Quantidade = quantidade,
-                Preco = produto.Preco
+                Preco = produto.Preco,
+                Observacao = observacao ?? ""
             });
 
         _state.EtapaAtual = EtapaPedido.AguardandoEndereco;
         return $"OK: {quantidade}x {produto.Descricao} (R${produto.Preco:F2}) adicionado.";
+
+
     }
 
 
@@ -161,8 +176,9 @@ public class DeliveryPlugin
         return "Pagamento registrado.";
     }
 
+
     [KernelFunction, Description("Finaliza e confirma o pedido do cliente.")]
-    public string FinalizarPedido()
+    public async Task<string> FinalizarPedido()
     {
         var erros = new List<string>();
 
@@ -174,10 +190,17 @@ public class DeliveryPlugin
         if (erros.Any())
             return $"Faltam informações: {string.Join(", ", erros)}.";
 
+        // ← salva no banco
+        var sucesso = await _service.CriarVendaAsync(_state);
+
+        if (!sucesso)
+            return "Houve um problema ao registrar seu pedido. Tente novamente.";
+
         _state.PedidoFinalizado = true;
         _state.EtapaAtual = EtapaPedido.Finalizado;
         return "Pedido finalizado com sucesso! Obrigado pela preferência.";
     }
+
 
     [KernelFunction, Description("Limpa todos os itens do pedido atual.")]
     public string LimparPedido()
