@@ -1,5 +1,9 @@
 # 🧪 POC com WhatsApp Cloud API
 
+<div align="center">
+<img src="https://github.com/raphaelamonteiro/whatsapp-business-integration/blob/main/assets/Pixel%20Coding%20Sticker.gif" width="240" alt="Stars & Purple Aesthetic"/>
+</div>
+
 Proof of concept para testes de envio de mensagens, notificações e automações utilizando a **WhatsApp Cloud API (Meta)**.
 
 Este repositório foi criado para validar cenários de comunicação automatizada (ex: campanhas, notificações e fluxos baseados em eventos), servindo como base experimental para futuras integrações em sistemas maiores.
