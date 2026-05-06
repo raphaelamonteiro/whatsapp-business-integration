@@ -33,3 +33,4 @@ public class ItemPedido
     public decimal Preco { get; set; }
     public string Observacao { get; set; } = "";
 }
+

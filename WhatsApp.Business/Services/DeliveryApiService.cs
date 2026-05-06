@@ -66,33 +66,34 @@ public class DeliveryApiService
     }
     public async Task<bool> CriarVendaAsync(PedidoState pedido)
     {
-        // DEBUG
-        Console.WriteLine($"🛒 Itens no pedido: {pedido.Itens.Count}");
-        foreach (var item in pedido.Itens)
-            Console.WriteLine($"   → {item.ProdutoUid} | {item.Nome} | {item.Quantidade}x R${item.Preco}");
-
-        var total = pedido.Itens.Sum(i => i.Preco * i.Quantidade);
+        var valorTotalCalculado = pedido.Itens.Sum(i => i.Preco * i.Quantidade);
 
         var venda = new VendaDto
         {
-            TotalServico = total,
-            Total = total,
-            TotalAPagar = total,
+            Total = valorTotalCalculado,        // <--- Forçando o valor aqui
+            TotalAPagar = valorTotalCalculado,
+            TotalServico = valorTotalCalculado,
             DataHoraAbertura = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+            StatusVenda = 1,
             ListVendaProdutoServico = pedido.Itens.Select(i => new VendaProdutoServicoDto
             {
                 ProdutoUid = i.ProdutoUid,
                 Quantidade = i.Quantidade,
                 ValorUnitario = i.Preco,
                 ValorTotal = i.Preco * i.Quantidade,
-                Observacao = i.Observacao,
+                Observacao = i.Observacao ?? "",
                 ImprimirCozinha = true
             }).ToList()
         };
 
-        // DEBUG — vê o JSON exato que vai pra API
+        // DEBUG
+        Console.WriteLine($"Itens no pedido: {pedido.Itens.Count}");
+        foreach (var item in pedido.Itens)
+            Console.WriteLine($"   → {item.ProdutoUid} | {item.Nome} | {item.Quantidade}x R${item.Preco}");
+
         var jsonDebug = JsonSerializer.Serialize(venda, new JsonSerializerOptions { WriteIndented = true });
-        Console.WriteLine($"📦 JSON enviado:\n{jsonDebug}");
+
+        Console.WriteLine($"JSON enviado:\n{jsonDebug}");
 
         var request = new RestRequest("/Venda/Salvar", Method.Post);
         request.AddJsonBody(venda);

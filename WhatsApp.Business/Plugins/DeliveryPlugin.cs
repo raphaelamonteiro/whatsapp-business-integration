@@ -83,31 +83,29 @@ public class DeliveryPlugin
         }
 
         var produtos = await _service.BuscarProdutosAsync(nome);
+
         // Filtra localmente pelo nome buscado (ignora produtos de teste)
         var produtosFiltrados = produtos?
-            .Where(p => ScoreSimilaridade(p.Descricao, nome) > 0)
-            .OrderByDescending(p => ScoreSimilaridade(p.Descricao, nome))
-            .ToList();
+                .Where(p => ScoreSimilaridade(p.Descricao, nome) > 0)
+                .OrderByDescending(p => ScoreSimilaridade(p.Descricao, nome))
+                .ToList();
 
         if (produtosFiltrados == null || produtosFiltrados.Count == 0)
             return $"'{nome}' não encontrado no cardápio.";
 
         var produto = produtosFiltrados.First();
-        Console.WriteLine($"✅ Produto escolhido: {produto.Uid} | {produto.Descricao}");
-
-
-        // DEBUG — remove depois
-        Console.WriteLine($"✅ Produto escolhido: {produto.Uid} | {produto.Descricao} | R${produto.Preco}");
-        Console.WriteLine($"   Score: {ScoreSimilaridade(produto.Descricao, nome)}");
-        if (produtos == null || produtos.Count == 0)
-            return $"'{nome}' não encontrado no cardápio.";
-
-
-        var existente = _state.Itens.FirstOrDefault(i => i.Nome == produto.Descricao);
+        // Verificamos se o produto já está no carrinho pelo UID único dele
+        var existente = _state.Itens.FirstOrDefault(i => i.ProdutoUid == produto.Uid);
 
         if (existente != null)
+        {
             existente.Quantidade += quantidade;
+            // Atualiza a observação apenas se o usuário enviou uma nova
+            if (!string.IsNullOrEmpty(observacao)) existente.Observacao = observacao;
+        }
         else
+        {
+            // Se não existe, adicionamos um novo ItemPedido
             _state.Itens.Add(new ItemPedido
             {
                 ProdutoUid = produto.Uid,
@@ -116,11 +114,14 @@ public class DeliveryPlugin
                 Preco = produto.Preco,
                 Observacao = observacao ?? ""
             });
+        }
+
+        // DEBUG
+        Console.WriteLine($"✅ Produto escolhido: {produto.Uid} | {produto.Descricao} | R${produto.Preco}");
+        Console.WriteLine($"   Score: {ScoreSimilaridade(produto.Descricao, nome)}");
 
         _state.EtapaAtual = EtapaPedido.AguardandoEndereco;
         return $"OK: {quantidade}x {produto.Descricao} (R${produto.Preco:F2}) adicionado.";
-
-
     }
 
 
@@ -180,27 +181,24 @@ public class DeliveryPlugin
     [KernelFunction, Description("Finaliza e confirma o pedido do cliente.")]
     public async Task<string> FinalizarPedido()
     {
-        var erros = new List<string>();
+        if (!_state.Itens.Any()) return "Seu carrinho está vazio!";
+        if (string.IsNullOrEmpty(_state.Endereco)) return "Por favor, me informe o endereço antes.";
 
-        if (string.IsNullOrEmpty(_state.Telefone)) erros.Add("telefone");
-        if (!_state.Itens.Any()) erros.Add("itens");
-        if (string.IsNullOrEmpty(_state.Endereco)) erros.Add("endereço");
-        if (string.IsNullOrEmpty(_state.FormaPagamento)) erros.Add("forma de pagamento");
-
-        if (erros.Any())
-            return $"Faltam informações: {string.Join(", ", erros)}.";
-
-        // ← salva no banco
         var sucesso = await _service.CriarVendaAsync(_state);
 
-        if (!sucesso)
-            return "Houve um problema ao registrar seu pedido. Tente novamente.";
+        if (sucesso)
+        {
+            _state.Itens.Clear();
+            _state.Endereco = "";
+            _state.FormaPagamento = "";
+            _state.Telefone = "";
+            _state.EtapaAtual = EtapaPedido.Finalizado;
 
-        _state.PedidoFinalizado = true;
-        _state.EtapaAtual = EtapaPedido.Finalizado;
-        return "Pedido finalizado com sucesso! Obrigado pela preferência.";
+            return "Pedido finalizado com sucesso! Ele já apareceu no nosso sistema e está indo para a cozinha. 🍕";
+        }
+
+        return "Ops! Tive um problema técnico ao enviar seu pedido para o sistema. Pode tentar confirmar novamente?";
     }
-
 
     [KernelFunction, Description("Limpa todos os itens do pedido atual.")]
     public string LimparPedido()
