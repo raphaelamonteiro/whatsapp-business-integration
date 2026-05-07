@@ -2,10 +2,10 @@ public class VendaProdutoServicoDto
 {
     public Guid? VendaUid { get; set; } = null;
     public Guid? ProdutoUid { get; set; }
-    public decimal Quantidade { get; set; }
-    public decimal ValorUnitario { get; set; }
-    public decimal ValorTotal { get; set; }
-    public string Observacao { get; set; } = "";
+    public required decimal Quantidade { get; set; }
+    public required decimal ValorUnitario { get; set; }
+    public required decimal ValorTotal { get; set; }
+    public String? Observacao { get; set; } = "";
     public bool ImprimirCozinha { get; set; } = true;
     public Guid? Uid { get; set; } = null;
     public Guid? EmpresaUid { get; set; } = null;
@@ -23,9 +23,9 @@ public class VendaDto
     public int StatusVenda { get; set; } = 1; // 1 = ABERTA
     public string DataHoraAbertura { get; set; } = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
     public string? DataHoraFinalizacao { get; set; } = null;
-    public decimal TotalServico { get; set; }
-    public decimal Total { get; set; }
-    public decimal TotalAPagar { get; set; }
+    public required decimal TotalServico { get; set; }
+    public required decimal Total { get; set; }
+    public required decimal TotalAPagar { get; set; }
     public List<VendaProdutoServicoDto> ListVendaProdutoServico { get; set; } = new();
     public Guid? Uid { get; set; } = null;
     public Guid? EmpresaUid { get; set; } = null;

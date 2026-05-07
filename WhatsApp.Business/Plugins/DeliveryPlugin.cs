@@ -43,7 +43,7 @@ public class DeliveryPlugin
             return "Nenhum produto disponível no momento.";
 
         var sb = new StringBuilder();
-        // Só nome e preço — sem descrição longa no contexto
+        // Só nome e preço - sem descrição longa no contexto
         foreach (var p in produtos.Take(15))
             sb.AppendLine($"{p.Descricao}|R${p.Preco:F2}");
 
@@ -122,6 +122,21 @@ public class DeliveryPlugin
 
         _state.EtapaAtual = EtapaPedido.AguardandoEndereco;
         return $"OK: {quantidade}x {produto.Descricao} (R${produto.Preco:F2}) adicionado.";
+    }
+
+    [KernelFunction, Description("Adiciona ou atualiza a observação de um item já adicionado ao pedido.")]
+    public string AdicionarObservacao(
+    [Description("Nome do produto para adicionar observação")] string nomeProduto,
+    [Description("Texto da observação, ex: sem cebola, bem passado")] string observacao)
+    {
+        var item = _state.Itens.FirstOrDefault(i =>
+            i.Nome.ToLower().Contains(nomeProduto.ToLower()));
+
+        if (item == null)
+            return $"Produto '{nomeProduto}' não encontrado no pedido.";
+
+        item.Observacao = observacao;
+        return $"Observação '{observacao}' adicionada para {item.Nome}.";
     }
 
 
