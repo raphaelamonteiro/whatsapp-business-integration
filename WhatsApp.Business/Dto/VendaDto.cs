@@ -11,12 +11,12 @@ public class VendaProdutoServicoDto
     public Guid? EmpresaUid { get; set; } = null;
     public string DataHoraInclusao { get; set; } = "";
     public string DataHoraAlteracao { get; set; } = "";
-    public int StatusRegistroEnum { get; set; } = 1;
+    public int StatusRegistroEnum { get; set; } = 0;
 }
 
 public class VendaDto
 {
-    public Guid CaixaUid { get; set; } = Guid.Parse("019df3f3-8645-7ed0-9ba0-f2814f96318c");
+    public Guid? CaixaUid { get; set; } = null;
     public Guid? ClienteFornecedorUid { get; set; } = null;
     public Guid? MesaUid { get; set; } = null;
     public Guid? ComandaUid { get; set; } = null;
@@ -31,5 +31,5 @@ public class VendaDto
     public Guid? EmpresaUid { get; set; } = null;
     public string DataHoraInclusao { get; set; } = "";
     public string DataHoraAlteracao { get; set; } = "";
-    public int StatusRegistroEnum { get; set; } = 1;
+    public int StatusRegistroEnum { get; set; } = 0;
 }

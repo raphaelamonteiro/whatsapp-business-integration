@@ -70,11 +70,12 @@ public class DeliveryApiService
 
         var venda = new VendaDto
         {
-            Total = valorTotalCalculado,        // <--- Forçando o valor aqui
+            Total = valorTotalCalculado,
+            TotalServico = 0,
             TotalAPagar = valorTotalCalculado,
-            TotalServico = valorTotalCalculado,
             DataHoraAbertura = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
             StatusVenda = 1,
+            StatusRegistroEnum = 0,
             ListVendaProdutoServico = pedido.Itens.Select(i => new VendaProdutoServicoDto
             {
                 ProdutoUid = i.ProdutoUid,
@@ -82,7 +83,8 @@ public class DeliveryApiService
                 ValorUnitario = i.Preco,
                 ValorTotal = i.Preco * i.Quantidade,
                 Observacao = i.Observacao ?? "",
-                ImprimirCozinha = true
+                ImprimirCozinha = true,
+                StatusRegistroEnum = 0
             }).ToList()
         };
 

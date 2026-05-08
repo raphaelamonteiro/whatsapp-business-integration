@@ -10,7 +10,6 @@ public class DeliveryPlugin
 {
     private readonly DeliveryApiService _service;
     private readonly PedidoState _state;
-
     public DeliveryPlugin(DeliveryApiService service, PedidoState state)
     {
         _service = service;
@@ -18,7 +17,6 @@ public class DeliveryPlugin
     }
 
     public int DebugStateId() => _state.GetHashCode();
-
     [KernelFunction, Description("Registra o telefone do cliente para iniciar o atendimento.")]
     public string InformarTelefone(
         [Description("Número de telefone do cliente")] string telefone)
@@ -43,7 +41,6 @@ public class DeliveryPlugin
             return "Nenhum produto disponível no momento.";
 
         var sb = new StringBuilder();
-        // Só nome e preço - sem descrição longa no contexto
         foreach (var p in produtos.Take(15))
             sb.AppendLine($"{p.Descricao}|R${p.Preco:F2}");
 
@@ -84,7 +81,6 @@ public class DeliveryPlugin
 
         var produtos = await _service.BuscarProdutosAsync(nome);
 
-        // Filtra localmente pelo nome buscado (ignora produtos de teste)
         var produtosFiltrados = produtos?
                 .Where(p => ScoreSimilaridade(p.Descricao, nome) > 0)
                 .OrderByDescending(p => ScoreSimilaridade(p.Descricao, nome))
@@ -94,18 +90,15 @@ public class DeliveryPlugin
             return $"'{nome}' não encontrado no cardápio.";
 
         var produto = produtosFiltrados.First();
-        // Verificamos se o produto já está no carrinho pelo UID único dele
         var existente = _state.Itens.FirstOrDefault(i => i.ProdutoUid == produto.Uid);
 
         if (existente != null)
         {
             existente.Quantidade += quantidade;
-            // Atualiza a observação apenas se o usuário enviou uma nova
             if (!string.IsNullOrEmpty(observacao)) existente.Observacao = observacao;
         }
         else
         {
-            // Se não existe, adicionamos um novo ItemPedido
             _state.Itens.Add(new ItemPedido
             {
                 ProdutoUid = produto.Uid,
@@ -139,8 +132,7 @@ public class DeliveryPlugin
         return $"Observação '{observacao}' adicionada para {item.Nome}.";
     }
 
-
-    // Similaridade simples: conta quantas palavras do nome buscado aparecem no produto
+    // similaridade: conta quantas palavras do nome buscado aparecem no produto
     private static int ScoreSimilaridade(string descricao, string nomeBuscado)
     {
         var descLower = descricao.ToLower();
@@ -209,7 +201,7 @@ public class DeliveryPlugin
             _state.Telefone = "";
             _state.EtapaAtual = EtapaPedido.Finalizado;
 
-            return "Pedido finalizado com sucesso! Ele já apareceu no nosso sistema e está indo para a cozinha. 🍕";
+            return "Pedido finalizado com sucesso! Ele já apareceu no nosso sistema e está indo para a cozinha.";
         }
 
         return "Ops! Tive um problema técnico ao enviar seu pedido para o sistema. Pode tentar confirmar novamente?";
